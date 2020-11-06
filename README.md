@@ -23,7 +23,7 @@ by adding `bony_trace` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:bony_trace, "~> 0.1.0"}
+    {:bony_trace, "~> 0.1.0", only: [:dev]}
   ]
 end
 ```
