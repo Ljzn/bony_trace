@@ -4,11 +4,16 @@ defmodule BonyTrace.Tracer do
   def ensure_start(pid) do
     case GenServer.whereis(__MODULE__) do
       p when is_pid(p) ->
+        add_trace(pid)
         :ok
 
       _ ->
         start(pid)
     end
+  end
+
+  def add_trace(pid) do
+    GenServer.cast(__MODULE__, {:add, pid})
   end
 
   def stop(pid) do
@@ -49,14 +54,28 @@ defmodule BonyTrace.Tracer do
     end
   end
 
-  defp print_log(type, pid, msg, target, {_, s1, micros1} = ts, last_ts) do
-    {_, s0, micros0} = last_ts || ts
+  @impl true
+  def handle_cast({:add, pid}, state) do
+    {:noreply, Map.put_new(state, pid, nil)}
+  end
+
+  defp print_log(type, pid, msg, target, ts, last_ts) do
+    last_ts = last_ts || ts
+
+    type =
+      case type do
+        "sent" ->
+          IO.ANSI.color(99) <> "SENT" <> IO.ANSI.black()
+
+        "received" ->
+          IO.ANSI.color(22) <> "RECEIVED" <> IO.ANSI.black()
+      end
 
     [
       """
       #{
         String.pad_trailing(
-          "#{inspect(pid)} #{String.upcase(type)} #{
+          "#{inspect(pid)} #{type} #{
             if target do
               "TO: #{inspect(target)}"
             else
@@ -65,7 +84,7 @@ defmodule BonyTrace.Tracer do
           }",
           55
         )
-      }+#{s1 - s0}.#{String.pad_leading("#{micros1 - micros0}", 6, "0")}s
+      }+#{diffts(ts, last_ts)}s
       """,
       IO.ANSI.light_black(),
       "MESSAGE:",
@@ -74,5 +93,10 @@ defmodule BonyTrace.Tracer do
     ]
     |> IO.iodata_to_binary()
     |> IO.puts()
+  end
+
+  defp diffts({_, second1, micro_second1}, {_, second0, micro_second0}) do
+    x = (second1 * 1_000_000 + micro_second1 - (second0 * 1_000_000 + micro_second0)) / 1_000_000
+    :io_lib.format("~.6f", [x]) |> to_string()
   end
 end
