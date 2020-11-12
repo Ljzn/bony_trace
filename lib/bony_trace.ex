@@ -8,9 +8,14 @@ defmodule BonyTrace do
 
   @doc """
   Start tracing pid.
+
+  opts:
+    - receiver: fun pid() -> any()
+      a function be applied with the receiver's pid, the result will be printed
+      at the same position.
   """
-  def start(pid) do
-    BonyTrace.Tracer.ensure_start(pid)
+  def start(pid, opts \\ []) do
+    BonyTrace.Tracer.ensure_start(pid, opts)
     :erlang.trace(pid, true, trace_flags())
   end
 

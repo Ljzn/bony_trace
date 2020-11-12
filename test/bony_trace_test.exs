@@ -21,11 +21,13 @@ defmodule BonyTraceTest do
 
     # trace another process
     spawn(fn ->
-      BonyTrace.start(self())
+      BonyTrace.start(self(), receiver: &Process.info(&1, :initial_call))
       send(self(), :hi)
 
       receive do
         _msg ->
+          # keep alive 1s
+          :timer.sleep(1000)
           :ok
       end
     end)

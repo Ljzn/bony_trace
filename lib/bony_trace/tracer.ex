@@ -1,44 +1,45 @@
 defmodule BonyTrace.Tracer do
   use GenServer
 
-  def ensure_start(pid) do
+  def ensure_start(pid, opts) do
     case GenServer.whereis(__MODULE__) do
       p when is_pid(p) ->
-        add_trace(pid)
+        add_trace(pid, opts)
         :ok
 
       _ ->
-        start(pid)
+        start()
+        add_trace(pid, opts)
     end
   end
 
-  def add_trace(pid) do
-    GenServer.cast(__MODULE__, {:add, pid})
+  def add_trace(pid, opts) do
+    GenServer.cast(__MODULE__, {:add, pid, opts})
   end
 
   def stop(pid) do
     GenServer.cast(__MODULE__, {:stop, pid})
   end
 
-  defp start(pid) do
-    GenServer.start(__MODULE__, pid, name: __MODULE__)
+  defp start() do
+    GenServer.start(__MODULE__, :ok, name: __MODULE__)
   end
 
   @impl true
-  def init(pid) do
-    {:ok, %{pid => nil}}
+  def init(:ok) do
+    {:ok, %{}}
   end
 
   @impl true
   def handle_info({:trace_ts, pid, :send, msg, to, ts}, state) do
-    print_log("sent", pid, msg, to, ts, state[pid])
-    {:noreply, %{state | pid => ts}}
+    print_log("sent", pid, msg, to, ts, state |> tracee(pid))
+    {:noreply, state |> update_tracee(pid, :ts, ts)}
   end
 
   @impl true
   def handle_info({:trace_ts, pid, :receive, msg, ts}, state) do
-    print_log("received", pid, msg, nil, ts, state[pid])
-    {:noreply, %{state | pid => ts}}
+    print_log("received", pid, msg, nil, ts, state |> tracee(pid))
+    {:noreply, state |> update_tracee(pid, :ts, ts)}
   end
 
   @impl true
@@ -55,12 +56,14 @@ defmodule BonyTrace.Tracer do
   end
 
   @impl true
-  def handle_cast({:add, pid}, state) do
-    {:noreply, Map.put_new(state, pid, nil)}
+  def handle_cast({:add, pid, opts}, state) do
+    {:noreply, state |> update_tracee(pid, :opts, opts)}
   end
 
-  defp print_log(type, pid, msg, target, ts, last_ts) do
-    last_ts = last_ts || ts
+  defp print_log(type, pid, msg, target, ts, pstate) do
+    last_ts = pstate[:ts] || ts
+    receiver_fn = pstate.opts[:receiver] || fn x -> x end
+    target = target && receiver_fn.(target)
 
     type =
       case type do
@@ -82,7 +85,7 @@ defmodule BonyTrace.Tracer do
               ""
             end
           }",
-          55
+          85
         )
       }+#{diffts(ts, last_ts)}s
       """,
@@ -98,5 +101,14 @@ defmodule BonyTrace.Tracer do
   defp diffts({_, second1, micro_second1}, {_, second0, micro_second0}) do
     x = (second1 * 1_000_000 + micro_second1 - (second0 * 1_000_000 + micro_second0)) / 1_000_000
     :io_lib.format("~.6f", [x]) |> to_string()
+  end
+
+  defp tracee(state, pid) do
+    state[pid]
+  end
+
+  defp update_tracee(state, pid, key, value) do
+    p = (state[pid] || %{}) |> Map.put(key, value)
+    Map.put(state, pid, p)
   end
 end
