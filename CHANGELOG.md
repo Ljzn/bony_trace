@@ -6,3 +6,8 @@
 # 0.1.2
 
 - add `receiver` option to process the receiver pid
+
+# 0.1.3
+
+- remove ASNI color
+- pretty print

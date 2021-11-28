@@ -2,17 +2,27 @@
 
 Print all messages sent or received by a process.
 
-
 ## How to use
 ```ex
-> BonyTrace.start(pid)
+iex> BonyTrace.start(Process.whereis(:init))
+1
+iex> :init.restart                          
+:ok
+#PID<0.0.0> <--                                                                      +0.000000s
 
-#PID<0.162.0> SENT TO: #PID<0.162.0>                   +0.000000s
-MESSAGE: :hi
-#PID<0.162.0> RECEIVED                                 +0.000003s
-MESSAGE: :hi
+  {#PID<0.548.0>, :get_status}
 
-> BonyTrace.stop(pid)
+#PID<0.0.0> --> #PID<0.548.0>                                                        +0.000007s
+
+  {:init, {:started, :started}}
+
+#PID<0.0.0> <--                                                                      +0.000180s
+
+  {:stop, :restart}
+
+#PID<0.0.0> --> #PID<0.527.0>                                                        +0.000005s
+
+  {:EXIT, #PID<0.492.0>, :shutdown}
 ```
 
 You can also set a `:receiver` function to get more info from the recerver's pid:
@@ -31,17 +41,6 @@ spawn(fn ->
 end)
 ```
 
-```
-#PID<0.205.0> SENT TO: #PID<0.205.0>                                  +0.000000s
-MESSAGE: :hi
-#PID<0.205.0> RECEIVED                                                +0.000003s
-MESSAGE: :hi
-#PID<0.207.0> SENT TO: {:initial_call, {:erlang, :apply, 2}}          +0.000000s
-MESSAGE: :hi
-#PID<0.207.0> RECEIVED                                                +0.000003s
-MESSAGE: :hi
-```
-
 ## Installation
 
 adding `bony_trace` to your list of dependencies in `mix.exs`:
@@ -49,12 +48,7 @@ adding `bony_trace` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:bony_trace, "~> 0.1.2", only: [:dev]}
+    {:bony_trace, "~> 0.1.3", only: [:dev]}
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/bony_trace](https://hexdocs.pm/bony_trace).
-

@@ -68,31 +68,24 @@ defmodule BonyTrace.Tracer do
     type =
       case type do
         "sent" ->
-          IO.ANSI.color(99) <> "SENT" <> IO.ANSI.black()
+          "-->"
 
         "received" ->
-          IO.ANSI.color(22) <> "RECEIVED" <> IO.ANSI.black()
+          "<--"
       end
 
     [
       """
-      #{
-        String.pad_trailing(
-          "#{inspect(pid)} #{type} #{
-            if target do
-              "TO: #{inspect(target)}"
-            else
-              ""
-            end
-          }",
-          85
-        )
-      }+#{diffts(ts, last_ts)}s
+      #{String.pad_trailing("#{inspect(pid)} #{type} #{if target do
+        "#{inspect(target)}"
+      else
+        ""
+      end}",
+      85)}+#{diffts(ts, last_ts)}s
       """,
-      IO.ANSI.light_black(),
-      "MESSAGE:",
-      IO.ANSI.black(),
-      " #{inspect(msg)}"
+      "\n",
+      "  #{inspect(msg)}",
+      "\n"
     ]
     |> IO.iodata_to_binary()
     |> IO.puts()
